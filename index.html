@@ -1,48 +1,54 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111413">
-  <meta name="description" content="An interactive, browser-local TOTP authenticator and RFC 6238 walkthrough.">
-  <title>TotoAuth | A local TOTP lab</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TotoAuth — TOTP demo</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#top" aria-label="TotoAuth home"><span class="brand-mark">T</span><span>Toto<em>Auth</em></span></a>
-    <nav class="top-nav" aria-label="Main navigation"><a href="#accounts">Authenticator</a><a href="#how-it-works">How it works</a><a href="#templates">Templates</a></nav>
-    <span class="local-badge">Stored on this device</span>
-  </header>
-  <main id="top" class="layout">
-    <section class="hero" aria-labelledby="page-title">
-      <div><p class="eyebrow">RFC 6238 · browser demo</p><h1 id="page-title">Your codes. Your device.</h1><p class="hero-copy">A working TOTP authenticator, plus a small look under the hood. Codes are generated offline in your browser; accounts stay in this browser's local storage.</p></div>
-      <div class="hero-actions"><button class="button" id="sample-button" type="button"><svg class="icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Load sample</button><button class="button primary" id="add-button" type="button"><svg class="icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Add account</button></div>
-    </section>
-    <section class="stats" aria-label="Authenticator status"><div class="stat"><span class="stat-label">Accounts</span><span class="stat-value" id="account-count">0 <small>saved locally</small></span></div><div class="stat"><span class="stat-label">Code interval</span><span class="stat-value">30 <small>seconds</small></span></div><div class="stat"><span class="stat-label">Algorithm</span><span class="stat-value">SHA-1 <small>HMAC</small></span></div></section>
-    <section class="accounts-section" id="accounts" aria-labelledby="accounts-title"><div class="section-heading"><div><h2 id="accounts-title">Authenticator</h2><p>Live one-time codes, refreshed every second.</p></div><button class="text-button" id="clear-button" type="button" hidden>Clear all accounts</button></div><div class="account-list" id="account-list" aria-live="polite"></div></section>
-    <div class="lower-grid">
-      <section class="panel" id="how-it-works" aria-labelledby="steps-title"><div class="panel-head"><h2 id="steps-title">How a code is made</h2><span>30 SEC CYCLE</span></div><div class="steps">
-        <div class="step"><span class="step-number">01</span><div><h3>Turn time into a counter</h3><p><code>floor(unix time / 30)</code> gives this time window a number both sides can agree on.</p></div></div>
-        <div class="step"><span class="step-number">02</span><div><h3>Sign the counter</h3><p>HMAC-SHA1 combines that counter with the shared secret enrolled with the service.</p></div></div>
-        <div class="step"><span class="step-number">03</span><div><h3>Truncate and format</h3><p>Dynamic truncation selects 31 bits, then modulo <code>1,000,000</code> produces a six-digit code.</p></div></div>
-      </div></section>
-      <section class="panel" id="templates" aria-labelledby="templates-title"><div class="panel-head"><h2 id="templates-title">TOTP code templates</h2><span>5 LANGUAGES</span></div>
-        <div class="code-tabs" role="tablist" aria-label="Code template language"><button class="tab-button" role="tab" id="tab-python" aria-selected="true" aria-controls="code-snippet" data-language="python">Python</button><button class="tab-button" role="tab" id="tab-javascript" aria-selected="false" aria-controls="code-snippet" data-language="javascript">JavaScript</button><button class="tab-button" role="tab" id="tab-go" aria-selected="false" aria-controls="code-snippet" data-language="go">Go</button><button class="tab-button" role="tab" id="tab-java" aria-selected="false" aria-controls="code-snippet" data-language="java">Java</button><button class="tab-button" role="tab" id="tab-rust" aria-selected="false" aria-controls="code-snippet" data-language="rust">Rust</button></div>
-        <div class="snippet-wrap"><button class="copy-button snippet-copy" id="snippet-copy" type="button" aria-label="Copy code template">Copy</button><pre class="snippet" id="code-snippet" role="tabpanel" aria-labelledby="tab-python"><code></code></pre></div>
-      </section>
-    </div>
-    <aside class="privacy-note"><span aria-hidden="true">&#9673;</span><p><strong>Local by design.</strong> Account labels and secrets are saved as plain text in this browser's local storage. They are not sent to a server, and clearing browser data or using “Clear all accounts” removes them. This demo is not an encrypted password vault.</p></aside>
-  </main>
-  <footer><div class="layout"><span>TotoAuth · A tiny RFC 6238 lab</span><span>Codes are generated on this device with the Web Crypto API.</span></div></footer>
-  <dialog id="account-dialog" aria-labelledby="dialog-title"><form class="dialog-content" id="account-form">
-    <div class="dialog-heading"><div><h2 id="dialog-title">Add an account</h2><p>Enter the shared secret from the service's 2FA setup.</p></div><button class="icon-button" id="close-dialog" type="button" aria-label="Close dialog">×</button></div>
-    <div class="field"><label for="service-input">Service name</label><input id="service-input" name="service" maxlength="48" placeholder="e.g. GitHub" required></div>
-    <div class="field"><label for="username-input">Account label</label><input id="username-input" name="username" maxlength="80" placeholder="you@example.com" required></div>
-    <div class="field"><label for="secret-input">Base32 secret</label><input id="secret-input" name="secret" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="JBSWY3DPEHPK3PXP" required><span class="field-hint">Spaces and dashes are okay. The secret stays in this browser.</span></div>
-    <p class="form-error" id="form-error" role="alert"></p><div class="dialog-actions"><button class="button" id="cancel-dialog" type="button">Cancel</button><button class="button primary" type="submit">Save account</button></div>
-  </form></dialog>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="script.js" defer></script>
+
+<header>
+  <h1>TotoAuth</h1>
+  <p>A small TOTP generator that runs entirely in your browser. Nothing leaves the page.</p>
+</header>
+
+<main>
+
+  <section>
+    <h2>Accounts</h2>
+    <ul class="accounts" id="accounts"></ul>
+
+    <form class="add-form" id="add-form">
+      <input type="text" id="label-input" placeholder="Label" autocomplete="off">
+      <input type="text" id="secret-input" placeholder="Base32 secret" autocomplete="off">
+      <button type="submit">Add</button>
+    </form>
+  </section>
+
+  <section class="prose">
+    <h2>How it works</h2>
+    <p>A TOTP code comes from two inputs: a shared secret and the current time. Your device and the server both hold the secret and run the same calculation, so they land on the same six digits without ever exchanging anything over the wire.</p>
+    <ol>
+      <li>Unix time is divided by 30, producing a counter that ticks once every half minute.</li>
+      <li>That counter is signed with the secret using HMAC-SHA1.</li>
+      <li>The last byte of the signature picks an offset. Four bytes from that offset are read and reduced to six digits.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Implementations</h2>
+    <p class="prose">The same three steps, written out in a few languages.</p>
+    <div class="tabs" id="tabs"></div>
+    <pre class="code"><code id="code"></code></pre>
+  </section>
+
+</main>
+
+<footer>
+  <p>Demo project. Secrets are stored unencrypted in localStorage — don't use this for real accounts.</p>
+</footer>
+
+<script src="script.js"></script>
 </body>
 </html>

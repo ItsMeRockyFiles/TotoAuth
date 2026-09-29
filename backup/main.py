@@ -54,3 +54,5 @@ def CreateTotp(username, key, platform):
         "platform": platform,
     })
     save_accounts(accounts)
+
+print(GetTotp(key))
