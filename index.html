@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TotoAuth — TOTP demo</title>
+  <title>TotoAuth</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <header>
   <h1>TotoAuth</h1>
-  <p>A small TOTP generator that runs entirely in your browser. Nothing leaves the page.</p>
 </header>
 
 <main>
@@ -37,17 +36,32 @@
   </section>
 
   <section>
-    <h2>Implementations</h2>
-    <p class="prose">The same three steps, written out in a few languages.</p>
-    <div class="tabs" id="tabs"></div>
-    <pre class="code"><code id="code"></code></pre>
+    <h2>GetTotp</h2>
+    <pre class="code"><code>def GetTotp(key:str):
+    secret_key = base64.b32decode(key)
+
+    t = time.time()
+    t0 = 0
+
+    ct = math.floor((t - t0) / 30)
+
+    c = ct.to_bytes(8, byteorder="big", signed=False)
+
+    hmac_sha1 = hmac.new(secret_key,c,hashlib.sha1).digest()
+
+    offset = hmac_sha1[-1] & 0x0F
+
+    slice_4bytes = hmac_sha1[offset:offset + 4]
+
+    intvalue = ((slice_4bytes[0] & 0x7F) &lt;&lt; 24) | (slice_4bytes[1] &lt;&lt; 16) | (slice_4bytes[2] &lt;&lt; 8) | (slice_4bytes[3])
+
+    moduloIntValue = intvalue % 1000000
+
+    TOTP = str(moduloIntValue).zfill(6)
+    return TOTP</code></pre>
   </section>
 
 </main>
-
-<footer>
-  <p>Demo project. Secrets are stored unencrypted in localStorage — don't use this for real accounts.</p>
-</footer>
 
 <script src="script.js"></script>
 </body>

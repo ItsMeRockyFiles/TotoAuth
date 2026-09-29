@@ -63,6 +63,8 @@ function save(accounts) {
 
 let accounts = load();
 const listEl = document.getElementById('accounts');
+const RING_R = 10;
+const RING_C = 2 * Math.PI * RING_R;
 
 function renderAccounts() {
   listEl.innerHTML = '';
@@ -89,9 +91,24 @@ function renderAccounts() {
     left.append(label, secret);
 
     const right = document.createElement('div');
+    right.className = 'account-right';
+
     const code = document.createElement('div');
     code.className = 'account-code';
     code.textContent = '······';
+
+    const timer = document.createElement('div');
+    timer.className = 'timer';
+    timer.innerHTML = `
+      <svg width="26" height="26" viewBox="0 0 26 26">
+        <circle class="track" cx="13" cy="13" r="${RING_R}"></circle>
+        <circle class="progress" cx="13" cy="13" r="${RING_R}"
+          stroke-dasharray="${RING_C}"
+          stroke-dashoffset="0"></circle>
+      </svg>
+      <span class="timer-text"></span>
+    `;
+
     const remove = document.createElement('button');
     remove.className = 'remove';
     remove.textContent = 'Remove';
@@ -101,8 +118,8 @@ function renderAccounts() {
       renderAccounts();
       tick();
     };
-    right.append(code, remove);
 
+    right.append(code, timer, remove);
     li.append(left, right);
     listEl.appendChild(li);
   }
@@ -110,18 +127,30 @@ function renderAccounts() {
 
 async function tick() {
   const now = Date.now();
-  const remaining = PERIOD - Math.floor(now / 1000) % PERIOD;
+  const elapsed = (now / 1000) % PERIOD;
+  const secondsLeft = Math.ceil(PERIOD - elapsed);
 
   for (const acc of accounts) {
     const li = listEl.querySelector(`[data-id="${acc.id}"]`);
     if (!li) continue;
+
     const codeEl = li.querySelector('.account-code');
+    const timerEl = li.querySelector('.timer');
+    const progressEl = li.querySelector('.progress');
+    const textEl = li.querySelector('.timer-text');
+
     try {
       codeEl.textContent = await totp(acc.secret, now);
-      codeEl.classList.toggle('expiring', remaining <= 5);
     } catch {
       codeEl.textContent = 'error';
     }
+
+    const expiring = secondsLeft <= 5;
+    codeEl.classList.toggle('expiring', expiring);
+    timerEl.classList.toggle('expiring', expiring);
+
+    textEl.textContent = secondsLeft;
+    progressEl.style.strokeDashoffset = RING_C * (elapsed / PERIOD);
   }
 }
 
@@ -147,92 +176,3 @@ document.getElementById('add-form').addEventListener('submit', (e) => {
 
 renderAccounts();
 tick();
-
-// --- code samples ---
-
-const samples = {
-  Python: `import hmac, hashlib, struct, time, base64
-
-def totp(secret, digits=6, period=30):
-    key = base64.b32decode(secret.upper())
-    counter = int(time.time()) // period
-    msg = struct.pack(">Q", counter)
-    digest = hmac.new(key, msg, hashlib.sha1).digest()
-
-    offset = digest[-1] & 0x0F
-    code = struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF
-    return str(code % 10 ** digits).zfill(digits)`,
-
-  JavaScript: `async function totp(secret, digits = 6, period = 30) {
-  const counter = Math.floor(Date.now() / 1000 / period);
-  const msg = new ArrayBuffer(8);
-  new DataView(msg).setUint32(4, counter, false);
-
-  const key = await crypto.subtle.importKey(
-    "raw", base32Decode(secret),
-    { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
-  );
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, msg));
-
-  const offset = sig[sig.length - 1] & 0x0F;
-  const binary =
-    ((sig[offset] & 0x7F) << 24) |
-    ((sig[offset + 1] & 0xFF) << 16) |
-    ((sig[offset + 2] & 0xFF) << 8) |
-    (sig[offset + 3] & 0xFF);
-
-  return String(binary % 10 ** digits).padStart(digits, "0");
-}`,
-
-  Go: `func totp(secret string, digits, period int) string {
-    key, _ := base32.StdEncoding.DecodeString(strings.ToUpper(secret))
-    counter := time.Now().Unix() / int64(period)
-
-    msg := make([]byte, 8)
-    binary.BigEndian.PutUint64(msg, uint64(counter))
-
-    mac := hmac.New(sha1.New, key)
-    mac.Write(msg)
-    digest := mac.Sum(nil)
-
-    offset := digest[len(digest)-1] & 0x0F
-    binary := binary.BigEndian.Uint32(digest[offset:offset+4]) & 0x7FFFFFFF
-    code := binary % uint32(math.Pow10(digits))
-    return fmt.Sprintf("%0*d", digits, code)
-}`,
-
-  Rust: `fn totp(secret: &str, digits: u32, period: u64) -> String {
-    let key = base32::decode(base32::Alphabet::RFC4648 { padding: false }, secret)
-        .expect("invalid secret");
-    let counter = SystemTime::now()
-        .duration_since(UNIX_EPOCH).unwrap().as_secs() / period;
-
-    let mut mac = Hmac::<Sha1>::new_from_slice(&key).unwrap();
-    mac.update(&counter.to_be_bytes());
-    let digest = mac.finalize().into_bytes();
-
-    let offset = (digest[19] & 0x0F) as usize;
-    let binary = u32::from_be_bytes([
-        digest[offset], digest[offset + 1],
-        digest[offset + 2], digest[offset + 3],
-    ]) & 0x7FFF_FFFF;
-
-    format!("{:0width$}", binary % 10u32.pow(digits), width = digits as usize)
-}`,
-};
-
-const tabsEl = document.getElementById('tabs');
-const codeEl = document.getElementById('code');
-
-Object.keys(samples).forEach((lang, i) => {
-  const btn = document.createElement('button');
-  btn.textContent = lang;
-  if (i === 0) btn.classList.add('active');
-  btn.onclick = () => {
-    [...tabsEl.children].forEach(b => b.classList.toggle('active', b === btn));
-    codeEl.textContent = samples[lang];
-  };
-  tabsEl.appendChild(btn);
-});
-
-codeEl.textContent = samples[Object.keys(samples)[0]];
