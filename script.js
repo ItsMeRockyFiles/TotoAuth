@@ -81,14 +81,18 @@ function renderAccounts() {
     const li = document.createElement('li');
     li.dataset.id = acc.id;
 
-    const left = document.createElement('div');
-    const label = document.createElement('div');
-    label.className = 'account-label';
-    label.textContent = acc.label;
-    const secret = document.createElement('div');
-    secret.className = 'account-secret';
-    secret.textContent = acc.secret.slice(0, 4) + '···' + acc.secret.slice(-4);
-    left.append(label, secret);
+    const info = document.createElement('div');
+    info.className = 'account-info';
+
+    const platform = document.createElement('div');
+    platform.className = 'account-platform';
+    platform.textContent = acc.platform;
+
+    const username = document.createElement('div');
+    username.className = 'account-username';
+    username.textContent = acc.username;
+
+    info.append(platform, username);
 
     const right = document.createElement('div');
     right.className = 'account-right';
@@ -120,7 +124,7 @@ function renderAccounts() {
     };
 
     right.append(code, timer, remove);
-    li.append(left, right);
+    li.append(info, right);
     listEl.appendChild(li);
   }
 }
@@ -160,16 +164,22 @@ setInterval(tick, 1000);
 
 document.getElementById('add-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  const labelEl = document.getElementById('label-input');
+  const platformEl = document.getElementById('platform-input');
+  const usernameEl = document.getElementById('username-input');
   const secretEl = document.getElementById('secret-input');
-  const label = labelEl.value.trim();
-  const secret = secretEl.value.trim().toUpperCase();
-  if (!label || !secret) return;
 
-  accounts.push({ id: crypto.randomUUID(), label, secret });
+  const platform = platformEl.value.trim();
+  const username = usernameEl.value.trim();
+  const secret = secretEl.value.trim().toUpperCase();
+  if (!platform || !username || !secret) return;
+
+  accounts.push({ id: crypto.randomUUID(), platform, username, secret });
   save(accounts);
-  labelEl.value = '';
+
+  platformEl.value = '';
+  usernameEl.value = '';
   secretEl.value = '';
+
   renderAccounts();
   tick();
 });
